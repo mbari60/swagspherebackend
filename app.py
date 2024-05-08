@@ -11,8 +11,7 @@ from models import db
 
 # the resources to create endpoints
 from resources.users import userSchema,Login
-
-
+from resources.products import ProductResource
 
 
 app = Flask(__name__)
@@ -48,7 +47,7 @@ app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(days=30)
 # the routes 
 api.add_resource(userSchema, '/registration')
 api.add_resource(Login, '/login')
-
+api.add_resource(ProductResource, '/products', '/products/<int:product_id>')
 
 
 
