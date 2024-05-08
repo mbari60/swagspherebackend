@@ -9,6 +9,12 @@ from flask_bcrypt import Bcrypt
 from flask_mail import Mail, Message
 from models import db
 
+# the resources to create endpoints
+from resources.users import userSchema,Login
+
+
+
+
 app = Flask(__name__)
 
 CORS(app)
@@ -16,8 +22,13 @@ api = Api(app)
 bcrypt = Bcrypt(app)
 JWTManager(app)
 
-# db.init_app(app)
-# migrate = Migrate(app, db)
+# should be at the top b4 the db and migration initialization
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.db'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+
+db.init_app(app)
+migration = Migrate(app, db)
 
 # Email configuration
 app.config['MAIL_SERVER'] = 'smtp.gmail.com'
@@ -28,12 +39,19 @@ app.config['MAIL_USE_TLS'] = False
 app.config['MAIL_USE_SSL'] = True
 mail = Mail(app)
 
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.db'
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 # Setup for JWT
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY')
 app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(days=30)
+
+
+# the routes 
+api.add_resource(userSchema, '/registration')
+api.add_resource(Login, '/login')
+
+
+
+
 
 @app.route('/')
 def hello():

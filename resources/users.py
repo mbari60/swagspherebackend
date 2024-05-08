@@ -1,0 +1,118 @@
+from flask_restful import Resource, fields, marshal_with, reqparse
+from flask_bcrypt import generate_password_hash, check_password_hash
+from flask_jwt_extended import create_access_token, create_refresh_token, jwt_required, get_jwt_identity
+from models import UserModel, db
+
+user_fields = {
+    "id": fields.Integer,
+    "username": fields.String,
+    "phone": fields.String,
+    "email": fields.String,
+    "role": fields.String,
+    "is_active": fields.Boolean,
+    "merit_points": fields.Integer,
+}
+
+
+class userSchema(Resource):
+    user_parser = reqparse.RequestParser()
+    user_parser.add_argument('username', required=True, type=str, help="Enter the username")
+    user_parser.add_argument('phone', required=True, type=str, help="Enter the phone number")
+    user_parser.add_argument('email', required=True, type=str, help="Enter the email")
+    user_parser.add_argument('password', required=True, type=str, help="Enter the password")
+    user_parser.add_argument('role', required=False, type=str, help="Enter the role")
+    user_parser.add_argument('is_active', required=False, type=bool, help="Enter the active status")
+    user_parser.add_argument('merit_points', required=False, type=int, help="Enter the merit points")
+
+    @jwt_required()
+    @marshal_with(user_fields)
+    def get(self):
+        current_user_id = get_jwt_identity()
+        user = UserModel.query.filter_by(id=current_user_id).first()
+        return user
+
+    def post(self):
+        user_data = userSchema.user_parser.parse_args()
+        user_data['password'] = generate_password_hash(user_data['password'])
+        
+        # Check if phone number already exists
+        if UserModel.query.filter_by(phone=user_data['phone']).first():
+            return {"message": "Phone number already exists", "status": "fail"}, 400
+        
+        if UserModel.query.filter_by(username=user_data['username']).first():
+            return {"message": "username already exists", "status": "fail"}, 400
+        
+        # Check if email already exists 
+        if UserModel.query.filter_by(email=user_data['email']).first():
+            return {"message": "Email already exists", "status": "fail"}, 400
+        
+        
+        
+        new_user = UserModel(**user_data)
+
+        try:
+            db.session.add(new_user)
+            db.session.commit()
+
+            db.session.refresh(new_user)
+            user_json = new_user.to_json()
+
+            access_token = create_access_token(identity=user_json['id'])
+            refresh_token = create_refresh_token(identity=user_json['id'])
+
+            return {
+                "message": "Account created successfully",
+                "status": "success",
+                "access_token": access_token,
+                "refresh_token": refresh_token,
+                "user": user_json
+            }, 201
+
+        except:
+            return {"message":"Failed to register user", "status": "fail"}, 500
+
+    @jwt_required()
+    def delete(self):
+        current_user_id = get_jwt_identity()
+        user = UserModel.query.get(current_user_id)
+        if user or user.role == 'admin':
+            try:
+                db.session.delete(user)
+                db.session.commit()
+                return {"message": "Account deleted successfully"}, 200
+            except Exception as e:
+                return {"message": str(e)}, 500
+        else:
+            return {"message": "User not found"}, 404
+
+
+class Login(Resource):
+    user_parser = reqparse.RequestParser()
+    user_parser.add_argument('identifier', required=True, type=str, help="Enter email or username")
+    user_parser.add_argument('password', required=True, type=str, help="Enter password")
+
+    def post(self):
+        data = Login.user_parser.parse_args()
+        identifier = data['identifier']
+        password = data['password']
+
+        # Try to find the user by email or username 
+        user = UserModel.query.filter((UserModel.email == identifier) | (UserModel.username == identifier)).first()
+
+        if user:
+            if check_password_hash(user.password, password):
+                user_json = user.to_json()
+                access_token = create_access_token(identity=user_json['id'])
+                refresh_token = create_refresh_token(identity=user_json['id'])
+                return {
+                    "message": "Login successful",
+                    "status": "success",
+                    "access_token": access_token,
+                    "refresh_token": refresh_token,
+                    "user": user_json
+                }, 200
+            else:
+                return {"message": "Invalid email/username or password", "status": "fail"}, 401
+        else:
+            return {"message": "Invalid email/username or password", "status": "fail"}, 401
+
