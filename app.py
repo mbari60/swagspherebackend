@@ -13,6 +13,10 @@ from models import db
 from resources.users import userSchema,Login
 from resources.products import ProductResource
 from resources.variantproducts import ProductVariantResource
+from resources.orders import OrderResource
+from resources.offers import OfferResource
+from resources.notifications import NotificationResource 
+from resources.feedback import FeedbackResource
 
 app = Flask(__name__)
 
@@ -49,10 +53,10 @@ api.add_resource(userSchema, '/registration')
 api.add_resource(Login, '/login')
 api.add_resource(ProductResource, '/products', '/products/<int:product_id>')
 api.add_resource(ProductVariantResource, '/variantproducts', '/variantproducts/<int:product_id>')
-
-
-
-
+api.add_resource(OrderResource, '/orders', '/orders/<int:order_id>')
+api.add_resource(OfferResource, '/offers', '/offers/<int:offer_id>')
+api.add_resource(NotificationResource, '/notifications', '/notifications/<int:id>')
+api.add_resource(FeedbackResource, '/feedbacks', '/feedbacks/<int:feedback_id>')
 
 @app.route('/')
 def hello():

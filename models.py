@@ -131,6 +131,7 @@ class OfferModel(db.Model):
     __tablename__ = 'offers'
 
     id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer , db.ForeignKey('users.id'))
     offer_name = db.Column(db.String(100))
     description = db.Column(db.String)
     previous_price = db.Column(db.Integer, nullable=True)
