@@ -40,7 +40,7 @@ class NotificationResource(Resource):
         return marshal(notification, notification_fields), 201
 
     def delete(self, notification_id):
-        notification = NotificationModel.query.get(notification_id)
+        notification = NotificationModel.query.filter_by(id = notification_id).first()
         if notification:
             db.session.delete(notification)
             db.session.commit()

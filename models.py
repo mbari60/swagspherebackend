@@ -79,16 +79,6 @@ def validate_rating(target, value, oldvalue, initiator):
         return max(0, min(value, 5))
     return None
 
-class ProductVariantModel(db.Model):
-    __tablename__ = 'product_variants'
-
-    id = db.Column(db.Integer, primary_key=True)
-    product_id = db.Column(db.Integer, db.ForeignKey('products.id'))
-    color = db.Column(db.String(50), nullable=True)
-    photo_url = db.Column(db.String)
-    size = db.Column(db.String(20), nullable=True)
-    other_variant_details = db.Column(db.String, nullable=True)
-
 class OrderModel(db.Model):
     __tablename__ = 'orders'
 
@@ -96,18 +86,28 @@ class OrderModel(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
     total_amount = db.Column(db.Integer)
     status = db.Column(db.Boolean, default=False)
-
+    
+    # Remove product_id from the OrderModel
+    
+    # Instead of having a single product_id column, create a relationship
+    # with ProductModel through a many-to-many relationship table
     order_items = db.relationship('OrderItemModel', backref='order', lazy=True, cascade="all, delete-orphan")
+
 
 class OrderItemModel(db.Model):
     __tablename__ = 'order_items'
 
     id = db.Column(db.Integer, primary_key=True)
     order_id = db.Column(db.Integer, db.ForeignKey('orders.id'))
-    variant_id = db.Column(db.Integer, db.ForeignKey('product_variants.id'))
+    product_id = db.Column(db.Integer, db.ForeignKey('products.id'))
     quantity = db.Column(db.Integer)
     unit_price = db.Column(db.Integer)
+    
+    # Establish relationship with ProductModel
+    product = db.relationship('ProductModel', backref='ordered_items')
 
+
+    
 class NotificationModel(db.Model):
     __tablename__ = 'notifications'
 
@@ -184,3 +184,13 @@ def validate_feedback_rating(target, value, oldvalue, initiator):
         if value is not None:
             return max(0, min(value, 5))
         return None
+
+class UserOfferModel(db.Model):
+    __tablename__ = 'user_offers'
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+    offer_id = db.Column(db.Integer, db.ForeignKey('offers.id'))
+
+    user = db.relationship('UserModel', backref='user_offers')
+    offer = db.relationship('OfferModel', backref='user_offers')
