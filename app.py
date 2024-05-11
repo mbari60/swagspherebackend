@@ -1,7 +1,7 @@
 import os
 from flask import Flask,request, render_template , jsonify
 from flask_cors import CORS
-from flask_jwt_extended import JWTManager
+from flask_jwt_extended import JWTManager , jwt_required, get_jwt_identity
 from datetime import timedelta
 from flask_migrate import Migrate
 from flask_restful import Api , marshal
@@ -10,7 +10,7 @@ from flask_mail import Mail, Message
 from models import db , UserOfferModel , UserModel , OfferModel , OrderItemModel , ProductModel , OrderModel
 
 # the resources to create endpoints
-from resources.users import userSchema,Login
+from resources.users import userSchema,Login,user_fields
 from resources.products import ProductResource
 #from resources.variantproducts import ProductVariantResource
 #from resources.orders import OrderResource
@@ -50,6 +50,7 @@ app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY')
 app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(days=30)
 
 
+
 # the routes 
 api.add_resource(userSchema, '/registration')
 api.add_resource(Login, '/login')
@@ -58,14 +59,25 @@ api.add_resource(ProductResource, '/products', '/products/<int:product_id>')
 #api.add_resource(OrderResource, '/orders', '/orders/<int:order_id>')
 api.add_resource(OfferResource, '/offers', '/offers/<int:offer_id>')
 api.add_resource(NotificationResource, '/notifications', '/notifications/<int:notification_id>')
-api.add_resource(FeedbackResource, '/feedbacks', '/feedbacks/<int:feedback_id>')
+api.add_resource(FeedbackResource, '/feedbacks', '/feedbacks/<int:id>')
 # api.add_resource(UserOfferResource, '/offerbookings', '/offerbookings/<int:id>')
+
+#admin getting all users 
+@app.route('/users', methods=['GET'])
+def get_all_users():
+    users = UserModel.query.all()
+    if users:
+        return marshal(users, user_fields), 200
+    else:
+        return {"message": "No users found"}, 404
+
 
 # offer bookings 
 @app.route('/offerbookings', methods=['POST'])
+@jwt_required()
 def create_offer_booking():
     args = request.get_json()
-
+    args['user_id'] = get_jwt_identity()
     # Check if the user has already booked this offer
     existing_booking = UserOfferModel.query.filter_by(user_id=args['user_id'], offer_id=args['offer_id']).first()
     if existing_booking:
@@ -75,10 +87,15 @@ def create_offer_booking():
 
     # Fetch user and offer details
     user = UserModel.query.filter_by(id=args['user_id']).first()
-    email = user.email if user else None  # Handle potential missing user
+    #email = user.email if user else None  # Handle potential missing user
     offer = OfferModel.query.filter_by(id=args['offer_id']).first()
+    
+    if not offer.slots_limit > 0:
+        return {"message":"all offer products have been purchased , try your luck next time"}
 
     if user and offer:
+        offer.slots_limit -= 1
+        db.session.commit()
         send_offerbookingconfirmation_email(user, offer)
         send_adminbooking_email(user, offer)
         db.session.add(user_offer)
@@ -114,21 +131,22 @@ def send_adminbooking_email(user, offer):
 
 # making orders and cancellations 
 @app.route('/orders', methods=['POST'])
+@jwt_required()
 def create_order():
     data = request.json
-    
+    user_id = get_jwt_identity()
+    print(user_id)
     # Check if required fields are provided
-    if 'user_id' not in data or 'order_items' not in data:
+    if not 'user_id' or 'order_items' not in data:
         return jsonify({'message': 'User ID and order items are required'}), 400
     
     # Extract user_id from the request data
-    user_id = data['user_id']
-    
+   
     # Check if the user exists
     user = UserModel.query.get(user_id)
     if not user:
         return jsonify({'message': 'User not found'}), 404
-
+    
     # Extract order items from the request data
     order_items = data['order_items']
     
@@ -162,7 +180,7 @@ def create_order():
     
     send_orderconfimation_email(user,order)
     send_admin_neworder_email(user,order)
-
+    user.merit_points +=1
     db.session.commit()
     
     return jsonify({'message': 'Order created successfully', 'order_id': order.id, 'total_amount': total_amount}), 201

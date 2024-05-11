@@ -153,7 +153,7 @@ class OfferModel(db.Model):
         ).all()
         for offer in expired_offers:
             db.session.delete(offer)
-        db.session.commit()
+            db.session.commit()
 
 @event.listens_for(OfferModel.rating, 'set')
 def validate_offer_rating(target, value, oldvalue, initiator):
@@ -166,7 +166,8 @@ class FeedbackModel(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
-    message = db.Column(db.String)
+    username = db.Column(db.String,nullable=False)
+    comment = db.Column(db.String)
     rating = db.Column(db.Integer, nullable=True)
     created_at = db.Column(db.TIMESTAMP, server_default=func.now())
     

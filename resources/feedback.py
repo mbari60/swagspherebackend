@@ -1,61 +1,80 @@
-from flask_restful import Resource, reqparse, fields, marshal
-from models import FeedbackModel, db
-from datetime import datetime, timedelta
-from sqlalchemy import func
+from flask_restful import Resource ,fields ,marshal_with,reqparse ,marshal
+from flask_jwt_extended import jwt_required , get_jwt_identity
+from models import FeedbackModel ,db,UserModel
 
-feedback_fields = {
-    "id": fields.Integer,
-    "user_id": fields.Integer,
-    "message": fields.String,
-    "rating": fields.Integer,
-    "created_at": fields.DateTime(dt_format="iso8601"),
+Feedback_fields = {
+    'id': fields.Integer,
+    'user_id': fields.Integer,
+    'username': fields.String,
+    'comment': fields.String,
 }
 
 class FeedbackResource(Resource):
-    def __init__(self):
-        self.parser = reqparse.RequestParser()
-        self.parser.add_argument('user_id', type=int, required=True, help="User ID is required")
-        self.parser.add_argument('message', type=str, required=True, help="Message is required")
-        self.parser.add_argument('rating', type=int)
-
-    def get(self, feedback_id=None):
-        if feedback_id:
-            feedback = FeedbackModel.query.get(feedback_id)
-            if feedback:
-                return marshal(feedback, feedback_fields), 200
-            else:
-                return {"message": "Feedback not found"}, 404
+    parser = reqparse.RequestParser()
+    parser.add_argument('comment', required=False)
+    
+    
+    @marshal_with(Feedback_fields)
+    def get(self, id=None):
+    
+        if id:
+            feedback = FeedbackModel.query.filter_by(id = id).first()
+            return feedback
         else:
             feedbacks = FeedbackModel.query.all()
-            if feedbacks:
-                return marshal(feedbacks, feedback_fields)
-            else:
-                return {"message": "No feedbacks available"}, 404
 
+            return feedbacks
+        
+
+    @jwt_required()
     def post(self):
-        args = self.parser.parse_args()
-        feedback = FeedbackModel(**args)
-        db.session.add(feedback)
-        db.session.commit()
-        return marshal(feedback, feedback_fields), 201
+      data = FeedbackResource.parser.parse_args() 
+      current_user_id = get_jwt_identity()
+      data['user_id'] = current_user_id
+      user = UserModel.query.filter_by(id = current_user_id).first()
+      data['username'] = user.username
+      feedback= FeedbackModel(**data)
 
-    def put(self, feedback_id):
-        args = self.parser.parse_args()
-        feedback = FeedbackModel.query.get(feedback_id)
-        if feedback:
-            feedback.user_id = args['user_id']
-            feedback.message = args['message']
-            feedback.rating = args['rating']
-            db.session.commit()
-            return marshal(feedback, feedback_fields), 200
-        else:
-            return {"message": "Feedback not found"}, 404
+      try:
+          db.session.add(feedback)
+          db.session.commit()
+          return {'message':'successfully added your feedback'},201
+      except Exception as e:
+                print(f"An error occurred: {e}")
+                return {"message":"User already has a feedback with this user_id"},400
 
-    def delete(self, feedback_id):
-        feedback = FeedbackModel.query.get(feedback_id)
-        if feedback:
-            db.session.delete(feedback)
-            db.session.commit()
-            return {"message": "Feedback deleted successfully"}, 204
+      
+ 
+    
+    @jwt_required()
+    def patch(self,id):
+        data = FeedbackResource.parser.parse_args()
+        Feedbacks = FeedbackModel.query.get(id)
+
+        if Feedback_fields:
+            for key,value in data.items():
+                setattr(Feedbacks,key,value)
+            try:
+                db.session.commit()
+
+                return {"message":"Feedback updated successfully"}
+            except:
+                return {"message":"Feedback unable to be updated"}
+            
         else:
-            return {"message": "Feedback not found"}, 404
+            return {"message":"Feedback not found"}
+        
+
+    @jwt_required()
+    def delete(self,id):
+        Feedback = FeedbackModel.query.filter_by(id = id).first()
+        if Feedback:
+            try:
+                db.session.delete(Feedback)
+                db.session.commit()
+
+                return {"message":"Feedback deleted"}
+            except:
+                return {"message":"Feedback unable to be deleted"}
+        else:
+            return {"message":"Feedback not found"}

@@ -1,4 +1,4 @@
-from flask_restful import Resource, fields, marshal_with, reqparse
+from flask_restful import Resource, fields, marshal_with, reqparse , marshal
 from flask_bcrypt import generate_password_hash, check_password_hash
 from flask_jwt_extended import create_access_token, create_refresh_token, jwt_required, get_jwt_identity
 from models import UserModel, db
@@ -25,11 +25,13 @@ class userSchema(Resource):
     user_parser.add_argument('merit_points', required=False, type=int, help="Enter the merit points")
 
     @jwt_required()
-    @marshal_with(user_fields)
     def get(self):
         current_user_id = get_jwt_identity()
-        user = UserModel.query.filter_by(id=current_user_id).first()
-        return user
+        user = UserModel.query.filter_by(id = current_user_id).first()
+        # admin gets all users
+        if user:
+           return marshal(user, user_fields)
+        return {"message":"user not found", "status":"fail"}, 400
 
     def post(self):
         user_data = userSchema.user_parser.parse_args()
