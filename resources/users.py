@@ -25,10 +25,16 @@ class userSchema(Resource):
     user_parser.add_argument('merit_points', required=False, type=int, help="Enter the merit points")
 
     @jwt_required()
-    def get(self):
+    def get(self, id):
+        # we are using identity to get a specific user
+        if id:
+            user = UserModel.query.filter_by(id=id).first()
+            if user:
+                return marshal(user, user_fields)
+            return {"message": "User not found", "status": "fail"}, 400
+        
         current_user_id = get_jwt_identity()
         user = UserModel.query.filter_by(id = current_user_id).first()
-        # admin gets all users
         if user:
            return marshal(user, user_fields)
         return {"message":"user not found", "status":"fail"}, 400
@@ -74,18 +80,26 @@ class userSchema(Resource):
             return {"message":"Failed to register user", "status": "fail"}, 500
 
     @jwt_required()
-    def delete(self):
+    def delete(self,id):
         current_user_id = get_jwt_identity()
         user = UserModel.query.get(current_user_id)
-        if user or user.role == 'admin':
+        if user and user.role == 'admin':
+            user = UserModel.query.filter_by(id = id).first()
             try:
                 db.session.delete(user)
                 db.session.commit()
                 return {"message": "Account deleted successfully"}, 200
             except Exception as e:
                 return {"message": str(e)}, 500
-        else:
-            return {"message": "User not found"}, 404
+        elif user:
+            try:
+                db.session.delete(user)
+                db.session.commit()
+                return {"message": "Account deleted successfully"}, 200
+            except Exception as e:
+                return {"message": str(e)}, 500
+            
+        return {"message": "User not found"}, 404
 
 
 class Login(Resource):

@@ -5,7 +5,7 @@ from flask_jwt_extended import JWTManager , jwt_required, get_jwt_identity
 from datetime import timedelta
 from flask_migrate import Migrate
 from flask_restful import Api , marshal
-from flask_bcrypt import Bcrypt
+from flask_bcrypt import Bcrypt,generate_password_hash
 from flask_mail import Mail, Message
 from models import db , UserOfferModel , UserModel , OfferModel , OrderItemModel , ProductModel , OrderModel
 
@@ -18,6 +18,7 @@ from resources.offers import OfferResource
 from resources.notifications import NotificationResource 
 from resources.feedback import FeedbackResource
 #from resources.offerbookings import UserOfferModel
+from resources.admin import admin_required
 
 
 app = Flask(__name__)
@@ -50,9 +51,8 @@ app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY')
 app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(days=30)
 
 
-
 # the routes 
-api.add_resource(userSchema, '/registration')
+api.add_resource(userSchema, '/registration', '/registration/<int:id>')
 api.add_resource(Login, '/login')
 api.add_resource(ProductResource, '/products', '/products/<int:product_id>')
 #api.add_resource(ProductVariantResource, '/variantproducts', '/variantproducts/<int:product_id>')
@@ -70,7 +70,16 @@ def get_all_users():
         return marshal(users, user_fields), 200
     else:
         return {"message": "No users found"}, 404
+    
 
+
+@app.route('/profile', methods=['GET'])
+@jwt_required()
+def get_profile():
+    current_user = get_jwt_identity()
+    user = UserModel.query.filter_by(id = current_user).all()
+    return marshal(user, user_fields), 200
+    
 
 # offer bookings 
 @app.route('/offerbookings', methods=['POST'])
@@ -293,6 +302,70 @@ def order_delivered(order_id):
         return {"message":"Successfully delivered" , "status":"Success"},200
     return {'message': 'failed to mark as delivered' , "status":"fail"}, 400
 
+@app.route('/resetpassword/<int:id>', methods=['PUT'])
+@jwt_required()
+def reset_password(id=None):
+    data = request.json
+    user_id = get_jwt_identity()
+
+    if id:  # Admin resetting a user's password
+        admin = UserModel.query.filter_by(id=user_id).first()
+        if admin and admin.role == 'admin':
+            user = UserModel.query.filter_by(id=id).first()
+            if not user:
+                return jsonify({"error": "User not found"}), 404
+            new_password = data.get('password')
+            user.update_password(new_password)
+            return jsonify({"message": "Password reset successfully"}), 200
+        else:
+            return jsonify({"error": "Admin access required"}), 403
+
+    # User resetting their own password
+    email = data.get('email')
+    user = UserModel.query.filter_by(email=email).first()
+    if not user:
+        return jsonify({"error": "User not found"}), 404
+
+    new_password = data.get('new_password')
+    user.update_password(new_password)
+    return jsonify({"message": "Password reset successfully"}), 200
+
+
+@app.route('/redeemmeritpoints', methods=['PUT'])
+@jwt_required()
+def redeem_merit_points():
+    data = request.json
+    user_id = get_jwt_identity()
+    points_to_redeem = data.get('points')
+
+    user = UserModel.query.filter_by(id=user_id).first()
+    if not user:
+        return jsonify({"error": "User not found"}), 404
+
+    if user.merit_points < points_to_redeem:
+        return jsonify({"message": "Insufficient merit points"}), 400
+
+    user.merit_points -= points_to_redeem
+    db.session.commit()
+    return jsonify({"message": "Merit points redeemed successfully"}), 200
+
+@app.route('/changepassword', methods=['PUT'])
+@jwt_required()
+def change_password():
+    data = request.json
+    user_id = get_jwt_identity()
+    old_password = data.get('old_password')
+    new_password = data.get('new_password')
+
+    user = UserModel.query.filter_by(id=user_id).first()
+    if not user:
+        return jsonify({"error": "User not found"}), 404
+
+    if not user.check_password(old_password):
+        return jsonify({"error": "Incorrect old password"}), 400
+
+    user.update_password(new_password)
+    return jsonify({"message": "Password changed successfully"}), 200
 
 if __name__ == '__main__':
     app.run(debug=True)

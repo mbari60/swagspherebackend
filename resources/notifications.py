@@ -47,3 +47,14 @@ class NotificationResource(Resource):
             return {"message": "Notification deleted successfully"}, 204
         else:
             return {"message": "Notification not found"}, 404
+    
+    def put(self, notification_id):
+        args = self.parser.parse_args()
+        notification = NotificationModel.query.get(notification_id)
+        if notification:
+            for key, value in args.items():
+                setattr(notification, key, value)
+            db.session.commit()
+            return marshal(notification, notification_fields), 200
+        else:
+            return {"message": "notification not found"}, 404

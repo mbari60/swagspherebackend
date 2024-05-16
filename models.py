@@ -28,6 +28,10 @@ class UserModel(db.Model):
     
     def check_password(self, password):
         return check_password_hash(self.password, password)
+    
+    def update_password(self, new_password):
+        self.password = generate_password_hash(new_password)
+        db.session.commit()
 
     def to_json(self):
         return {
