@@ -10,6 +10,7 @@ offer_fields = {
     "offer_price": fields.Integer,
     "timeline": fields.Integer,
     "image_url": fields.String,
+    "insta_url": fields.String,
     "slots_limit": fields.Integer,
     "created_at": fields.DateTime(dt_format="iso8601"),
     "rating": fields.Integer,
@@ -24,6 +25,7 @@ class OfferResource(Resource):
         self.parser.add_argument('offer_price', type=int, required=True, help="Offer price is required")
         self.parser.add_argument('timeline', type=int, default=60)
         self.parser.add_argument('image_url', type=str)
+        self.parser.add_argument('insta_url', type=str, required=False, help="insta url is required")
         self.parser.add_argument('slots_limit', type=int)
         self.parser.add_argument('rating', type=int)
 
@@ -59,6 +61,7 @@ class OfferResource(Resource):
             offer.offer_price = args['offer_price']
             offer.timeline = args['timeline']
             offer.image_url = args['image_url']
+            offer.insta_url = args['insta_url']
             offer.slots_limit = args['slots_limit']
             offer.rating = args['rating']
             db.session.commit()

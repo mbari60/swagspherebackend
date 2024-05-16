@@ -62,16 +62,18 @@ class ProductModel(db.Model):
     price = db.Column(db.Integer)
     stock_quantity = db.Column(db.Integer, nullable=True)
     category = db.Column(db.String(50))
-    image_url = db.Column(db.String(255))
+    image_url = db.Column(db.String)
+    insta_url = db.Column(db.String, nullable=True)
     rating = db.Column(db.Integer, nullable=True)
 
-    def __init__(self, name, description, price, stock_quantity, category, image_url, rating=None):
+    def __init__(self, name, description, price , stock_quantity, category, image_url, rating=None , insta_url = None):
         self.name = name
         self.description = description
         self.price = price
         self.stock_quantity = stock_quantity
         self.category = category
         self.image_url = image_url
+        self.insta_url = insta_url
         self.rating = rating
 
     def __repr__(self):
@@ -141,7 +143,8 @@ class OfferModel(db.Model):
     previous_price = db.Column(db.Integer, nullable=True)
     offer_price = db.Column(db.Integer)
     timeline = db.Column(db.Integer, default=60)
-    image_url = db.Column(db.String(255))
+    image_url = db.Column(db.String)
+    insta_url = db.Column(db.String, nullable=True)
     slots_limit = db.Column(db.Integer)
     created_at = db.Column(db.TIMESTAMP, server_default=func.now())
     rating = db.Column(db.Integer, nullable=True)

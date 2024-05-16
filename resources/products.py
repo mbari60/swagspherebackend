@@ -10,6 +10,7 @@ product_fields = {
     "stock_quantity": fields.Integer,
     "category": fields.String,
     "image_url": fields.String,
+    "insta_url": fields.String,
     "rating": fields.Integer,
 }
 
@@ -22,6 +23,7 @@ class ProductResource(Resource):
         self.parser.add_argument('stock_quantity', type=int, required=False, help="Stock quantity is optional")
         self.parser.add_argument('category', type=str, required=True, help="Product category is required")
         self.parser.add_argument('image_url', type=str, required=True, help="Image URL is required")
+        self.parser.add_argument('insta_url', type=str, required=False, help="insta url is required")
         self.parser.add_argument('rating', type=int, required=False, help="Product rating is optional")
 
     @staticmethod
