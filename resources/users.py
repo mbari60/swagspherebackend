@@ -80,7 +80,7 @@ class userSchema(Resource):
             return {"message":"Failed to register user", "status": "fail"}, 500
 
     @jwt_required()
-    def delete(self,id):
+    def delete(self,id=None):
         current_user_id = get_jwt_identity()
         user = UserModel.query.get(current_user_id)
         if user and user.role == 'admin':
