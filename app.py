@@ -29,7 +29,7 @@ bcrypt = Bcrypt(app)
 JWTManager(app)
 
 # should be at the top b4 the db and migration initialization
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.db'
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URI')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 
@@ -367,5 +367,6 @@ def change_password():
     user.update_password(new_password)
     return jsonify({"message": "Password changed successfully"}), 200
 
+
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=False)
