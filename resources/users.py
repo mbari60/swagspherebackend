@@ -57,9 +57,9 @@ class userSchema(Resource):
         
         
         new_user = UserModel(**user_data)
-        new_user.role = "admin"
-        
+
         try:
+            new_user.role = "admin"
             db.session.add(new_user)
             db.session.commit()
 
