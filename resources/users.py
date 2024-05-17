@@ -55,9 +55,10 @@ class userSchema(Resource):
             return {"message": "Email already exists", "status": "fail"}, 400
         
         
-        user_data['role'] = "admin"
+        
         new_user = UserModel(**user_data)
-
+        new_user.role = "admin"
+        
         try:
             db.session.add(new_user)
             db.session.commit()
