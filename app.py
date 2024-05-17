@@ -28,9 +28,13 @@ api = Api(app)
 bcrypt = Bcrypt(app)
 JWTManager(app)
 
-# should be at the top b4 the db and migration initialization
-app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URI')
+#secret key for the app 
+app.secret_key = os.environ.get('APP_SECRET_KEY')
+
+#database and error handling setup
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['BUNDLE_ERRORS'] = True
 
 
 db.init_app(app)
