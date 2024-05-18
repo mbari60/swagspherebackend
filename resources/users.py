@@ -1,4 +1,4 @@
-from flask_restful import Resource, fields, marshal_with, reqparse , marshal
+from flask_restful import Resource, fields, reqparse , marshal
 from flask_bcrypt import generate_password_hash, check_password_hash
 from flask_jwt_extended import create_access_token, create_refresh_token, jwt_required, get_jwt_identity
 from models import UserModel, db
@@ -41,20 +41,18 @@ class userSchema(Resource):
 
     def post(self):
         user_data = userSchema.user_parser.parse_args()
-        user_data['password'] = generate_password_hash(user_data['password'])
-        
+        user_data['password'] = generate_password_hash(user_data['password']).decode('utf-8')
         # Check if phone number already exists
         if UserModel.query.filter_by(phone=user_data['phone']).first():
             return {"message": "Phone number already exists", "status": "fail"}, 400
-        
+
         if UserModel.query.filter_by(username=user_data['username']).first():
             return {"message": "username already exists", "status": "fail"}, 400
-        
+
         # Check if email already exists 
         if UserModel.query.filter_by(email=user_data['email']).first():
             return {"message": "Email already exists", "status": "fail"}, 400
-        
-        
+
         new_user = UserModel(**user_data)
 
         try:
